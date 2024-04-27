@@ -1,0 +1,103 @@
+---
+name: Ezbake
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Project to build
+        required: true
+        type: choice
+        options:
+          - puppetserver
+          - puppetdb
+      project_ref:
+        description: Git ref of project
+      mock:
+        description: RPM platforms to package (default all)
+      cow:
+        description: DEB platforms to package (default all)
+      ezbake_version:
+        description: ezbake version
+        type: choice
+        default: project
+        options:
+          - container
+          - project
+          - repo
+      ezbake_repo:
+        description: Custom ezbake repository [url#ref]
+      ezbake_unreproducible_builds:
+        description: Support snapshot ezbake builds
+        type: boolean
+        default: true
+      ezbake_nodeploy:
+        description: Do not deploy ezbake build to repository
+        type: boolean
+        default: true
+      lein_profiles:
+        description: Lein profiles to use to build package
+        default: ezbake
+    secrets:
+      REGISTRY_PASSWORD:
+
+jobs:
+  package:
+    name: Package ${{ github.event.inputs.project }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Setup environment
+        run: |
+          echo "REPOSITORY=${{ vars.REPOSITORY != '' && vars.REPOSITORY || github.repository }}" >> $GITHUB_ENV
+          echo "REGISTRY=${{ vars.REGISTRY != '' && vars.REGISTRY || 'ghcr.io' }}" >> $GITHUB_ENV
+          echo "REGISTRY_USERNAME=${{ vars.REGISTRY_USERNAME != '' && vars.REGISTRY_USERNAME || github.actor }}" >> $GITHUB_ENV
+          echo "REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD != '' && secrets.REGISTRY_PASSWORD || secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Cache Repo
+        id: local-repo
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-local-repo
+          path: repo
+
+      - name: Build
+        run: |
+          set -x
+
+          PARAMS=()
+          PARAMS+=(--env PROJECT_REPO="${{ github.server_url }}/${{ github.repository_owner }}/${{ github.event.inputs.project }}")
+
+          [[ -n "${{ github.event.inputs.project_ref }}" ]] && PARAMS+=(--env PROJECT_REF="${{ github.event.inputs.project_ref }}")
+          [[ -n "${{ github.event.inputs.cow }}" ]] && PARAMS+=(--env COW="${{ github.event.inputs.cow }}")
+          [[ -n "${{ github.event.inputs.mock }}" ]] && PARAMS+=(--env MOCK="${{ github.event.inputs.mock }}")
+
+          case "${{ github.event.inputs.ezbake_version }}" in
+            container | repo)
+              PARAMS+=(--env UPDATE_EZBAKE_VERSION=true)
+              ;;&
+            repo)
+              X="${{ github.event.inputs.ezbake_repo }}"
+              PARAMS+=(--env EZBAKE_REPO="${X%#*}" --env EZBAKE_REF="${X#*#}")
+              ;;
+          esac
+
+          [[ -n "${{ github.event.inputs.ezbake_unreproducible_builds }}" ]] && PARAMS+=(--env EZBAKE_UNREPRODUCIBLE_BUILDS=${{ github.event.inputs.ezbake_unreproducible_builds }})
+          [[ -n "${{ github.event.inputs.ezbake_nodeploy }}" ]] && PARAMS+=(--env EZBAKE_NODEPLOY=${{ github.event.inputs.ezbake_nodeploy }})
+          [[ -n "${{ github.event.inputs.lein_profiles }}" ]] && PARAMS+=(--env LEIN_PROFILES="${{ github.event.inputs.lein_profiles }}")
+
+          docker run --rm -v ${{ github.workspace }}/output:/output -v ${{ github.workspace }}/repo:/repo "${PARAMS[@]}" "${REGISTRY}/${REPOSITORY}:latest"
+
+      - name: Outputs
+        run: |
+          cd ${{ github.workspace }}/output
+          find . -name 'i386' -type d -print0 | xargs -0 rm -rf || true
+          echo "OUTPUT_NAME=$(basename -s.tar.gz $(find . -regex './${{ github.event.inputs.project }}-.*'))" >> $GITHUB_ENV
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.OUTPUT_NAME }}
+          path: ${{ github.workspace }}/output
