@@ -11,7 +11,6 @@ ARG image_user_email
 ENV LANG="en_US.utf8"
 ENV EZBAKE_ALLOW_UNREPRODUCIBLE_BUILDS=true
 ENV EZBAKE_NODEPLOY=true
-ENV EZBAKE_VERSION="$version"
 ENV GEM_SOURCE=https://rubygems.org
 ENV LEIN_PROFILES=ezbake
 ENV USER_NAME="$image_user_name"
@@ -20,7 +19,7 @@ ENV USER_EMAIL="$image_user_email"
 LABEL org.opencontainers.image.title="ezbake" \
       org.opencontainers.image.vendor="$image_vendor" \
       org.opencontainers.image.url="$source_url" \
-      org.opencontainers.image.version="$EZBAKE_VERSION" \
+      org.opencontainers.image.version="$version" \
       org.opencontainers.image.source="$source_url" \
       org.opencontainers.image.revision="$vcs_ref" \
       org.opencontainers.image.created="$build_date" \
@@ -53,8 +52,18 @@ WORKDIR /ezbake_src
 RUN lein clean && lein install
 
 WORKDIR /
-
-ENTRYPOINT ["/docker-entrypoint.sh"] 
-
 COPY docker/ezbake/Dockerfile /
-RUN rm -rf /ezbake_src
+RUN <<EOF
+{
+    echo "version=\"$version\"" ;
+    echo "vcs_ref=\"$vcs_ref\"" ;
+    echo "build_date=\"$build_date\"" ;
+    echo "source_url=\"$source_url\"" ;
+    echo "image_vendor=\"$image_vendor\"" ;
+    echo "image_user_name=\"$image_user_name\"" ;
+    echo "image_user_email=\"$image_user_email\"" ;
+} > .docker_build_args
+rm -rf /ezbake_src
+EOF
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
