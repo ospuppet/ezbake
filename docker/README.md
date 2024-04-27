@@ -95,6 +95,8 @@ This container assumes that the code you're building will be in `/workspace`. Th
 will be copied into `/output` before the container terminates, and if you're building a
 custom ezbake that will be cloned into `/ezbake`.
 
+Lein is configured to use `/repo` as it's local-repo. Volume map to cache dependencies between builds.
+
 1. Run from a remotely accessible repo (github, gitlab, etc)
 
 This is by far the fastest build option, but does require the extra step of committing and pushing your code
