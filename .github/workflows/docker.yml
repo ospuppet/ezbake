@@ -3,6 +3,11 @@ name: Docker test and publish
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - 'CODEOWNERS'
+      - '.github/**'
+      - '.gitignore'
     tags:
       - '*.*.*'
     branches:
