@@ -1,7 +1,13 @@
+ifeq ($(source_url),)
+	git_remote := $(shell git config branch.`git name-rev --name-only HEAD`.remote)
+	git_remote := $(if $(git_remote),$(git_remote),origin)
+	source_url := $(shell git config --get remote.$(git_remote).url)
+	source_url := $(if $(source_url),$(source_url),https://github.com/puppetlabs/ezbake)
+endif
+
 REGISTRY ?= docker.io
 REPOSITORY ?= puppet/ezbake
 
-source_url := https://github.com/puppetlabs/ezbake
 vcs_ref := $(shell git rev-parse HEAD)
 build_date := $(shell date -u +%FT%T)
 image_vendor := $(if $(IMAGE_VENDOR),$(IMAGE_VENDOR),Puppet)
