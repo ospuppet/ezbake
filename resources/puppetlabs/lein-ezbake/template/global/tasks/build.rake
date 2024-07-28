@@ -49,7 +49,7 @@ namespace :pl do
         end
 
         # We want to include the arches for amazon/el/sles/fedora/redhatfips paths
-        ['x86_64', 'i386'].each do |arch|
+        ['x86_64'].each do |arch|
           target_dir = "#{pkg_path}/#{platform_path}#{arch}"
           FileUtils.mkdir_p(target_dir) unless File.directory?(target_dir)
           FileUtils.cp(Dir.glob("*#{os}#{ver}*.rpm"), target_dir)
