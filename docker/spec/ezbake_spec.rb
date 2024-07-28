@@ -30,7 +30,7 @@ describe 'ezbake_container' do
   end
 
   it 'should be able to build puppetserver' do
-    result = run_build('https://github.com/puppetlabs/puppetserver', 'main')
+    result = run_build('https://github.com/ospuppet/puppetserver', 'main')
     container = result[:stdout].chomp
     wait_on_container_exit(container, 450) unless container.empty?
     expect(get_container_exit_code(container)).to eq(0)
@@ -39,7 +39,7 @@ describe 'ezbake_container' do
   end
 
   it 'should be able to build puppetdb' do
-    result = run_build('https://github.com/puppetlabs/puppetdb', 'main')
+    result = run_build('https://github.com/ospuppet/puppetdb', 'main')
     container = result[:stdout].chomp
     wait_on_container_exit(container, 450) unless container.empty?
     expect(get_container_exit_code(container)).to eq(0)

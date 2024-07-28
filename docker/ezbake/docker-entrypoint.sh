@@ -6,9 +6,19 @@ source /.docker_build_args
 
 echo "Ezbake docker image $version, build $build_date, ref $vcs_ref, source $source_url"
 
+if [ -d /output ] ; then
+  OWNER_UID=$(stat -c '%u' /output)
+  OWNER_GID=$(stat -c '%g' /output)
+fi
+
 # setup maven repository cache
 if [ -d /repo ] ; then
-  cp -na /root/.m2/repository/* /repo/
+  # prefer container ezbake
+  if [[ "$UPDATE_EZBAKE_VERSION" == 'true' ]] && [[ -z "$EZBAKE_VERSION" ]]; then
+    rsync -rlv /root/.m2/repository/* /repo/
+  else
+    cp -na /root/.m2/repository/* /repo/
+  fi
   rm -rf /root/.m2/repository
   ln -s /repo /root/.m2/repository
   echo '{:user {:local-repo "/repo"}}' > /root/.lein/profiles.clj
@@ -62,3 +72,6 @@ lein clean && lein install
 
 lein with-profile $LEIN_PROFILES ezbake local-build
 rsync -a output/ /output/
+if [ -n "${OWNER_UID}" ] ; then
+  chown -R $OWNER_UID:$OWNER_GID /repo /output
+fi

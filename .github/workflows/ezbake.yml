@@ -73,7 +73,7 @@ jobs:
 
       - name: Build
         run: |
-          set -x
+          mkdir -p output repo
 
           PARAMS=()
           PARAMS+=(--env PROJECT_REPO="${{ github.server_url }}/${{ github.repository_owner }}/${{ github.event.inputs.project }}")

@@ -32,18 +32,18 @@ else
 	@cat $< | docker run --rm -i $(hadolint_container) $(hadolint_command) -
 endif
 
-build:
+build: $(dockerfile)
 	$(info -> $@ verison $(version) [$(build_date) $(source_url) $(vcs_ref)])
 	@docker build \
 		--pull \
-		--build-arg vcs_ref=$(vcs_ref) \
-		--build-arg build_date=$(build_date) \
-		--build-arg version=$(version) \
-		--build-arg source_url=$(source_url) \
-		--build-arg image_vendor=$(image_vendor) \
-		--build-arg image_user_name=$(image_user_name) \
-		--build-arg image_user_email=$(image_user_email) \
-		--file $(dockerfile) \
+		--build-arg vcs_ref="$(vcs_ref)" \
+		--build-arg build_date="$(build_date)" \
+		--build-arg version="$(version)" \
+		--build-arg source_url="$(source_url)" \
+		--build-arg image_vendor="$(image_vendor)" \
+		--build-arg image_user_name="$(image_user_name)" \
+		--build-arg image_user_email="$(image_user_email)" \
+		--file $< \
 		--tag $(REPOSITORY):$(version) \
 		$(if $(findstring true,$(TAG_LATEST)),--tag $(REPOSITORY):latest,) \
 		$(PWD)/..
