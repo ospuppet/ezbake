@@ -5,6 +5,8 @@ on:
   push:
     tags:
       - '*.*.*'
+    branches:
+      - ospuppet
 
 jobs:
   build-and-publish:
@@ -20,7 +22,7 @@ jobs:
           echo "REGISTRY=${{ vars.REGISTRY != '' && vars.REGISTRY || 'ghcr.io' }}" >> $GITHUB_ENV
           echo "REGISTRY_USERNAME=${{ vars.REGISTRY_USERNAME != '' && vars.REGISTRY_USERNAME || github.actor }}" >> $GITHUB_ENV
           echo "REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD != '' && secrets.REGISTRY_PASSWORD || secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
-          echo "TAG_LATEST=${{ github.event_name == 'push' && 'true' || 'false' }}" >> $GITHUB_ENV
+          echo "TAG_LATEST=${{ github.ref_type == 'tag' && 'true' || 'false' }}" >> $GITHUB_ENV
           echo "IMAGE_VENDOR=${{ vars.IMAGE_VENDOR != '' && vars.IMAGE_VENDOR || github.repository_owner }}" >> $GITHUB_ENV
           echo "IMAGE_USER_NAME=${{ vars.IMAGE_USER_NAME != '' && vars.IMAGE_USER_NAME || github.repository_owner }}" >> $GITHUB_ENV
           echo "IMAGE_USER_EMAIL=${{ vars.IMAGE_USER_EMAIL != '' && vars.IMAGE_USER_EMAIL || format('{0}+{1}@users.noreply.github.com', github.repository_owner_id, github.repository_owner) }}" >> $GITHUB_ENV
@@ -34,6 +36,20 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set tag as version
+        run: |
+          if [ "${{ github.ref_type }}" == "tag" ] ; then
+              export RELEASE="${{ github.ref_name }}"
+          else
+              TAG=$(git describe --tags --abbrev=0 || true)
+              if [ -z "${TAG}" ] ; then
+                  export RELEASE=$(sed -rn 's~.*defproject .*"([^"]+)"~\1~p' project.clj)
+              else
+                  export RELEASE="${TAG}-$(git rev-list ${TAG}..HEAD --count)"
+              fi
+          fi
+          sed -i -r 's~(.*defproject .*")[^"]+"~\1'${RELEASE}'"~' project.clj
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
