@@ -1,24 +1,30 @@
 ---
-name: Ezbake
+name: EZBake
+run-name: >
+  EZBake
+  project=${{ inputs.project }}#${{ inputs.project_ref }}
+  ${{ inputs.mock && format('mock={0}', inputs.mock) || ''}}
+  ${{ inputs.cow && format('cow={0}', inputs.cow) || '' }}
+  ${{ inputs.ezbake_version != 'project' && format('ezbake={0}', inputs.ezbake_version) || '' }}
 
 on:
   workflow_dispatch:
     inputs:
       project:
         description: Project to build
-        required: true
         type: choice
         options:
           - puppetserver
           - puppetdb
       project_ref:
         description: Git ref of project
+        required: true
       mock:
         description: RPM platforms to package (default all)
       cow:
         description: DEB platforms to package (default all)
       ezbake_version:
-        description: ezbake version
+        description: EZBake version
         type: choice
         default: project
         options:
@@ -26,7 +32,8 @@ on:
           - project
           - repo
       ezbake_repo:
-        description: Custom ezbake repository [url#ref]
+        description: "EZBake repo if version=repo [url#ref]"
+        default: "https://github.com/ospuppet/ezbake#ospuppet"
       ezbake_unreproducible_builds:
         description: Support snapshot ezbake builds
         type: boolean
@@ -94,8 +101,10 @@ jobs:
       - name: Outputs
         run: |
           cd ${{ github.workspace }}/output
-          find . -name 'i386' -type d -print0 | xargs -0 rm -rf || true
-          echo "OUTPUT_NAME=$(basename -s.tar.gz $(find . -regex './${{ github.event.inputs.project }}-.*'))" >> $GITHUB_ENV
+          { find . -name 'i386' -type d -print0 | xargs -0 rm -vrf ; } || true
+          ARCHIVE=$(find . -regex './${{ github.event.inputs.project }}-.*')
+          echo "OUTPUT_NAME=$(basename -s.tar.gz ${ARCHIVE})" >> $GITHUB_ENV
+          rm "${ARCHIVE}"
 
       - uses: actions/upload-artifact@v4
         with:
